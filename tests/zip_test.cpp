@@ -1,10 +1,13 @@
+#include <gtest/gtest.h>
+
 #include "zippp/zip.h"
+
 #include <vector>
 #include <string>
 #include <iostream>
 #include <array>
 
-int main()
+TEST(ZipppTests, basicTest)
 {
     const std::vector<int> v{1,2,3};
     //const std::array<int, 3> vs ={1,2,3};
