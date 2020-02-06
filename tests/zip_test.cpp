@@ -4,11 +4,58 @@
 
 #include <vector>
 #include <list>
+#include <forward_list>
 #include <string>
 #include <iostream>
 #include <array>
 
+TEST(ZipppTests, eqTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+    auto it2 = col.begin();
+    ASSERT_NE(&it, &it2);
+    EXPECT_TRUE(it == it2);
+    EXPECT_TRUE(it2 == it);
+    EXPECT_FALSE(it != it2);
+    EXPECT_FALSE(it2 != it);
+}
 
+TEST(ZipppTests, notEqualTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+    auto it2 = col.end();
+    ASSERT_NE(&it, &it2);
+    EXPECT_TRUE(it != it2);
+    EXPECT_TRUE(it2 != it);
+    EXPECT_FALSE(it == it2);
+    EXPECT_FALSE(it2 == it);
+}
+
+TEST(ZipppTests, incInplaceTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+    auto [val] = *(++it);
+    auto [val2] = *it;
+    EXPECT_EQ(2, val);
+    EXPECT_EQ(2, val2);
+}
+
+TEST(ZipppTests, incTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+    auto [val] = *(it++);
+    auto [val2] = *it;
+    EXPECT_EQ(1, val);
+    EXPECT_EQ(2, val2);
+}
 TEST(ZipppTests, singleTest)
 {
     std::vector<int> v{1,2,3};
@@ -121,4 +168,127 @@ TEST(ZipppTests, mismatchValueTypeTest)
         ASSERT_EQ(count*2, j);
         ++count;
     }
+}
+
+TEST(ZipppTests, forwardTagTest)
+{
+    std::forward_list<int> l1;
+    std::list<int> l2;
+    std::vector<int> l3;
+    auto col = zippp::zip(l1,l2,l3);
+    static_assert(std::is_same_v<std::forward_iterator_tag,decltype(col)::iterator::iterator_category>, 
+        "Iterator category is not forward iterator");
+    ASSERT_TRUE(true);
+}
+
+TEST(ZipppTests, biDirTagTest)
+{
+    std::list<int> l1;
+    std::vector<int> l2;
+    auto col = zippp::zip(l1,l2);
+    static_assert(std::is_same_v<std::bidirectional_iterator_tag,decltype(col)::iterator::iterator_category>, 
+        "Iterator category is not bidirectional iterator");
+    ASSERT_TRUE(true);
+}
+
+TEST(ZipppTests, randomTagTest)
+{
+    int l1[4];
+    std::vector<int> l2;
+    auto col = zippp::zip(l1,l2);
+    static_assert(std::is_same_v<std::random_access_iterator_tag, decltype(col)::iterator::iterator_category>, 
+        "Iterator category is not random access iterator");
+    ASSERT_TRUE(true);
+}
+
+TEST(ZipppTests, biDirDecInplaceTest)
+{
+    std::list<int> l{1,2,3};
+    auto col = zippp::zip(l);
+    auto it = col.end();
+    auto [val] = *(--it);
+    auto [val2] = *it;
+    EXPECT_EQ(val, 3);
+    ASSERT_EQ(val2, 3);
+}
+
+TEST(ZipppTests, biDirDecTest)
+{
+    std::list<int> l{1,2,3};
+    auto col = zippp::zip(l);
+    auto it = col.end();
+    auto orig = it--;
+    auto [val] = *it;
+    EXPECT_EQ(orig, col.end());
+    ASSERT_EQ(val, 3);
+}
+
+TEST(ZipppTests, randomDirDecInplaceTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.end();
+    auto [val] = *(--it);
+    auto [val2] = *it;
+    EXPECT_EQ(val, 3);
+    ASSERT_EQ(val2, 3);
+}
+
+TEST(ZipppTests, randomDirDecTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.end();
+    auto orig = it--;
+    auto [val] = *it;
+    EXPECT_EQ(orig, col.end());
+    ASSERT_EQ(val, 3);
+}
+
+TEST(ZipppTests, randomInplaceIncTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+
+    it += 2;
+    auto [val] = *it;
+
+    ASSERT_EQ(val, 3);
+}
+
+TEST(ZipppTests, randomInplaceDecTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.end();
+
+    it -= 2;
+    auto [val] = *it;
+
+    ASSERT_EQ(val, 2);
+}
+
+TEST(ZipppTests, randomAddTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+
+    auto it2 = it + 2;
+    auto [val] = *it2;
+
+    ASSERT_EQ(val, 3);
+}
+
+TEST(ZipppTests, randomSubTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.end();
+
+    auto it2 = it - 2;
+    auto [val] = *it2;
+
+    ASSERT_EQ(val, 2);
 }
