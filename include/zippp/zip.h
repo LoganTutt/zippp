@@ -34,7 +34,7 @@ public:
     }
     auto operator*()
     {
-        return std::apply([](auto&& ... iters){return std::make_tuple(*iters...);}, iter_tup);
+        return std::apply([](auto&& ... iters){return std::make_tuple<decltype(*iters)...>(*iters...);}, iter_tup);
     }
     bool operator!=(zip_iterator<Iters...> in) const
     {
@@ -50,6 +50,8 @@ template<typename ... Collections>
 class zip_collection
 {
 public:
+    using iterator = zip_iterator<decltype(std::begin(std::declval<Collections>()))...>;
+
     zip_collection(Collections&& ... in_cols) : col_tup(std::forward<Collections>(in_cols)...){}
 
     decltype(auto) begin()
