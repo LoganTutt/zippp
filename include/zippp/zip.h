@@ -52,6 +52,12 @@ private:
     template<typename Tag>
     static constexpr inline bool is_tag = std::is_base_of_v<Tag, iterator_category>;
 
+    // This was originally just inline with X = part of the SFINAE for the member functions, 
+    // but a compiler bug in GCC 9.2 caused a segfault.
+    // Moving it to this using directive fixes the bug, and it compiles on MSVC, GCC 9.2, anmd GCC 7.
+    template<typename T>
+    using IterEnabler = std::enable_if_t<is_tag<T>>;
+
 public:
     zip_iterator(Iters&&... iters) : iter_tup(std::forward<Iters>(iters)...){}
 
@@ -81,13 +87,13 @@ public:
     }
 
     // Bidirectional operations
-    template<typename T = std::bidirectional_iterator_tag, typename X = std::enable_if_t<is_tag<T>>>
+    template<typename T = std::bidirectional_iterator_tag, typename X = IterEnabler<T>>
     decltype(auto) operator--()
     {
         foreach_tuple(iter_tup, [](auto&& iter){--iter;});
         return *this;
     }
-    template<typename T = std::bidirectional_iterator_tag, typename X = std::enable_if_t<is_tag<T>>>
+    template<typename T = std::bidirectional_iterator_tag, typename X = IterEnabler<T>>
     auto operator--(int)
     {
         auto temp = *this;
@@ -96,26 +102,26 @@ public:
     }
 
     //random access operations
-    template<typename T = std::random_access_iterator_tag, typename X = std::enable_if_t<is_tag<T>>>
+    template<typename T = std::random_access_iterator_tag, typename X = IterEnabler<T>>
     decltype(auto) operator+=(ptrdiff_t i)
     {
         foreach_tuple(iter_tup, [i](auto&& iter){iter+=i;});
         return *this;
     }
-    template<typename T = std::random_access_iterator_tag, typename X = std::enable_if_t<is_tag<T>>>
+    template<typename T = std::random_access_iterator_tag, typename X = IterEnabler<T>>
     auto operator+(ptrdiff_t i) const
     {
         auto temp = *this;
         temp += i;
         return temp;
     }
-    template<typename T = std::random_access_iterator_tag, typename X = std::enable_if_t<is_tag<T>>>
+    template<typename T = std::random_access_iterator_tag, typename X = IterEnabler<T>>
     decltype(auto) operator-=(ptrdiff_t i)
     {
         foreach_tuple(iter_tup, [i](auto&& iter){iter-=i;});
         return *this;
     }
-    template<typename T = std::random_access_iterator_tag, typename X = std::enable_if_t<is_tag<T>>>
+    template<typename T = std::random_access_iterator_tag, typename X = IterEnabler<T>>
     auto operator-(ptrdiff_t i) const
     {
         auto temp = *this;
