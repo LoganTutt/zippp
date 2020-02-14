@@ -43,11 +43,13 @@ using iterator_tag_type = std::conditional_t<all_iter_are_type<std::random_acces
             std::input_iterator_tag>>>;
 
 template<typename ... Iters>
-class zip_iterator //: public std::iterator<iterator_tag_type,T,ptrdiff_t,const T*,const T&>
+class zip_iterator 
+    //TODO: : public std::iterator<iterator_tag_type,T,ptrdiff_t,const T*,const T&>
 {
 public:
     using iterator_category = iterator_tag_type<Iters...>;
     using difference_type = std::ptrdiff_t;
+    //TODO: add other itterator traits
 private:
     template<typename Tag>
     static constexpr inline bool is_tag = std::is_base_of_v<Tag, iterator_category>;
@@ -157,10 +159,19 @@ private:
 };
 }
 
+/**
+ * @brief Creates a wrapper collection of the provided collections that will iterate through all at once
+ * 
+ * 
+ * @param collections Collections that should be zipped together
+ * 
+ * All collections must be of the same length. They must also remain valid for as long as the returned object is valid
+ * @return A zip_collection containing copies to each of the provided collections
+ */
 template<typename ... Collections>
-auto zip(Collections&& ... cols)
+auto zip(Collections&& ... collections)
 {
-    return detail::zip_collection<Collections...>(std::forward<Collections>(cols)...);
+    return detail::zip_collection<Collections...>(std::forward<Collections>(collections)...);
 }
 }
 #endif
