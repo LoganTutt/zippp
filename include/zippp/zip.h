@@ -133,14 +133,18 @@ public:
 
 private:
     std::tuple<Iters...> iter_tup;
-};
 
+};
 
 template<typename ... Collections>
 class zip_collection
 {
 public:
     using iterator = zip_iterator<decltype(std::begin(std::declval<Collections>()))...>;
+    // If a list is an rvalue we will move it into our tuple and keep an actual list stored
+    // Otherwise we keep a reference
+    using tuple_type = std::tuple<std::conditional_t<std::is_rvalue_reference<Collections>::value,
+                                  std::decay_t<Collections>, Collections>...>;
 
     zip_collection(Collections&& ... in_cols) : col_tup(std::forward<Collections>(in_cols)...){}
 
@@ -155,7 +159,7 @@ public:
     }
 
 private:
-    std::tuple<Collections&...> col_tup;
+    tuple_type col_tup;
 };
 }
 
