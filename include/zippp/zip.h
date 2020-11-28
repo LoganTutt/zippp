@@ -43,6 +43,33 @@ using iterator_tag_type = std::conditional_t<all_iter_are_type<std::random_acces
             std::input_iterator_tag>>>;
 
 template<typename ... Iters>
+class zip_iter_value_view {
+private:
+    using tuple_type = std::tuple<Iters...>;
+    const tuple_type * iters;
+public:
+    zip_iter_value_view(const tuple_type& iters_) : iters(&iters_) {}
+
+    // Return a reference is the object is an lvalue
+    // This is true whenever the binding is any type of reference
+    template<std::size_t I>
+    auto constexpr get() const &  -> const decltype((*std::get<I>(*iters))) {
+        return *std::get<I>(*iters);
+    }
+    template<std::size_t I>
+    auto constexpr get() & -> decltype((*std::get<I>(*iters))) {
+        return *std::get<I>(*iters);
+    }
+
+    // Copy only if the object is an rvalue.
+    // This happens when the binding is not any form of reference.
+    template<std::size_t I>
+    auto constexpr get() const && -> typename std::decay<decltype(*std::get<I>(*iters))>::type {
+        return *std::get<I>(*iters);
+    }
+};
+
+template<typename ... Iters>
 class zip_iterator 
     //TODO: : public std::iterator<iterator_tag_type,T,ptrdiff_t,const T*,const T&>
 {
@@ -61,7 +88,16 @@ private:
     using IterEnabler = std::enable_if_t<is_tag<T>>;
 
 public:
-    zip_iterator(Iters&&... iters) : iter_tup(std::forward<Iters>(iters)...){}
+    zip_iterator(Iters&&... iters) : iter_tup(std::forward<Iters>(iters)...), iter_view(iter_tup) {}
+    ~zip_iterator() = default;
+
+    // Copy and move operators
+    zip_iterator(const zip_iterator& in) : iter_tup(in.iter_tup), iter_view(iter_tup) {}
+    zip_iterator(zip_iterator&& in) : iter_tup(std::move(in.iter_tup)), iter_view(iter_tup) {}
+    zip_iterator& operator=(zip_iterator in) {
+        std::swap(in.iter_tup, iter_tup);
+        iter_view = zip_iter_value_view(iter_tup);
+    }
 
     decltype(auto) operator++()
     {
@@ -75,9 +111,9 @@ public:
         return temp;
     }
 
-    auto operator*()
+    auto& operator*()
     {
-        return std::apply([](auto&& ... iters){return std::make_tuple<decltype(*iters)...>(*iters...);}, iter_tup);
+        return iter_view;
     }
     bool operator!=(zip_iterator<Iters...> in) const
     {
@@ -133,6 +169,8 @@ public:
 
 private:
     std::tuple<Iters...> iter_tup;
+    // Keep the value view here so that we can return lvalue references to it
+    zip_iter_value_view<Iters...> iter_view;
 
 };
 
@@ -177,5 +215,16 @@ auto zip(Collections&& ... collections)
 {
     return detail::zip_collection<Collections...>(std::forward<Collections>(collections)...);
 }
+}
+
+// Template specializations for zip_iter_value_view to let it be bound by structured bindings
+namespace std {
+    template<typename ... Iters>
+    struct tuple_size<zippp::detail::zip_iter_value_view<Iters...>> : std::integral_constant<size_t, sizeof...(Iters)> { };
+
+    template<std::size_t I, typename ... Iters>
+    struct tuple_element<I, zippp::detail::zip_iter_value_view<Iters...>> {
+        using type = typename std::decay<decltype(std::declval<zippp::detail::zip_iter_value_view<Iters...>>().template get<I>())>::type;
+    };
 }
 #endif

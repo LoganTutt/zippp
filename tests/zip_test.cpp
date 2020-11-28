@@ -292,3 +292,129 @@ TEST(ZipppTests, randomSubTest)
 
     ASSERT_EQ(val, 2);
 }
+
+// Testing wrapper to track destructions of objects
+template<typename T>
+struct DestructionLoggingWrapper : public T {
+    bool* has_destruted;
+    
+    template<typename...Args>
+    DestructionLoggingWrapper(bool* flag, Args... args) : T(std::forward<Args>(args)...), has_destruted(flag) {
+        *has_destruted = false;
+    }
+    ~DestructionLoggingWrapper() {if (has_destruted) *has_destruted = true;}
+    DestructionLoggingWrapper(const DestructionLoggingWrapper&) = delete;
+    DestructionLoggingWrapper(DestructionLoggingWrapper&& w) : T(std::move(w)) {
+        has_destruted = w.has_destruted;
+        w.has_destruted = nullptr;
+    }
+    DestructionLoggingWrapper& operator=(const DestructionLoggingWrapper&) = delete;
+    DestructionLoggingWrapper& operator=(DestructionLoggingWrapper&&) = delete;
+};
+
+TEST(ZipppTests, tmpListInput)
+{
+    std::initializer_list<int> ints = {1,2,3};
+    bool has_destructed = false;
+    {
+        auto col = zippp::zip(DestructionLoggingWrapper<std::vector<int>>(&has_destructed, ints));
+        ASSERT_FALSE(has_destructed);
+    }
+    ASSERT_TRUE(has_destructed);
+}
+
+TEST(ZipppTests, tmpListMultiInput)
+{
+    std::initializer_list<int> ints = {1,2,3};
+    bool has_destructed = false;
+    {
+        auto col = zippp::zip(ints, DestructionLoggingWrapper<std::vector<int>>(&has_destructed, ints));
+        ASSERT_FALSE(has_destructed);
+    }
+    ASSERT_TRUE(has_destructed);
+}
+
+TEST(ZipppTests, copyTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+
+    auto [val] = *it;
+    val = 5;
+    EXPECT_EQ(val, 5);
+    EXPECT_EQ(v.front(), 1);
+}
+
+TEST(ZipppTests, constCopyTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+
+    const auto [val] = *it;
+    static_assert(std::is_const_v<decltype(val)>, "Binding is not const");
+    EXPECT_EQ(val, 1);
+    v.front() = 5;
+    EXPECT_EQ(val, 1);
+}
+
+TEST(ZipppTests, refTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+
+    auto& [val] = *it;
+    val = 5;
+    EXPECT_EQ(val, 5);
+    EXPECT_EQ(v.front(), 5);
+}
+
+TEST(ZipppTests, rvalueRefTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+
+    auto&& [val] = *it;
+    val = 5;
+    EXPECT_EQ(val, 5);
+    EXPECT_EQ(v.front(), 5);
+}
+
+TEST(ZipppTests, constRefTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+
+    const auto& [val] = *it;
+    static_assert(std::is_const_v<decltype(val)>, "Binding is not const");
+    EXPECT_EQ(val, 1);
+    v.front() = 5;
+    EXPECT_EQ(val, 5);
+}
+
+TEST(ZipppTests, constRefConstSourceTest)
+{
+    const std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+
+    const auto& [val] = *it;
+    static_assert(std::is_const_v<decltype(val)>, "Binding is not const");
+    EXPECT_EQ(val, 1);
+}
+
+TEST(ZipppTests, copyConstSourceTest)
+{
+    const std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+
+    auto [val] = *it;
+    val = 5;
+    EXPECT_EQ(val, 5);
+    EXPECT_EQ(v.front(), 1);
+}
