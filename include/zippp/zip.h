@@ -46,25 +46,27 @@ template<typename ... Iters>
 class zip_iter_value_view {
 private:
     using tuple_type = std::tuple<Iters...>;
-    const tuple_type * iters;
+    const tuple_type* iters;
+
 public:
+    template<std::size_t I>
+    using element_type = decltype((*std::declval<typename std::tuple_element<I, tuple_type>::type>()));
+
     zip_iter_value_view(const tuple_type& iters_) : iters(&iters_) {}
 
     // Return a reference is the object is an lvalue
     // This is true whenever the binding is any type of reference
     template<std::size_t I>
-    auto constexpr get() const &  -> const decltype((*std::get<I>(*iters))) {
-        return *std::get<I>(*iters);
-    }
-    template<std::size_t I>
-    auto constexpr get() & -> decltype((*std::get<I>(*iters))) {
+    auto constexpr get() const &  -> element_type<I>
+    { 
         return *std::get<I>(*iters);
     }
 
     // Copy only if the object is an rvalue.
     // This happens when the binding is not any form of reference.
     template<std::size_t I>
-    auto constexpr get() const && -> typename std::decay<decltype(*std::get<I>(*iters))>::type {
+    auto constexpr get() const && -> typename std::decay<element_type<I>>::type
+    {
         return *std::get<I>(*iters);
     }
 };
@@ -81,6 +83,7 @@ public:
     using difference_type = typename Base::difference_type;
     using pointer = typename Base::pointer;
     using reference = typename Base::reference;
+
 private:
     template<typename Tag>
     static constexpr inline bool is_tag = std::is_base_of_v<Tag, iterator_category>;
@@ -98,7 +101,8 @@ public:
     // Copy and move operators
     zip_iterator(const zip_iterator& in) : iter_tup(in.iter_tup), iter_view(iter_tup) {}
     zip_iterator(zip_iterator&& in) : iter_tup(std::move(in.iter_tup)), iter_view(iter_tup) {}
-    zip_iterator& operator=(zip_iterator in) {
+    zip_iterator& operator=(zip_iterator in)
+    {
         std::swap(in.iter_tup, iter_tup);
         iter_view = zip_iter_value_view(iter_tup);
     }
@@ -225,11 +229,12 @@ auto zip(Collections&& ... collections)
 // Template specializations for zip_iter_value_view to let it be bound by structured bindings
 namespace std {
     template<typename ... Iters>
-    struct tuple_size<zippp::detail::zip_iter_value_view<Iters...>> : std::integral_constant<size_t, sizeof...(Iters)> { };
+    struct tuple_size<zippp::detail::zip_iter_value_view<Iters...>> : std::integral_constant<size_t, sizeof...(Iters)> {};
 
     template<std::size_t I, typename ... Iters>
-    struct tuple_element<I, zippp::detail::zip_iter_value_view<Iters...>> {
-        using type = typename std::decay<decltype(std::declval<zippp::detail::zip_iter_value_view<Iters...>>().template get<I>())>::type;
+    struct tuple_element<I, zippp::detail::zip_iter_value_view<Iters...>>
+    {
+        using type = typename std::decay<typename zippp::detail::zip_iter_value_view<Iters...>::template element_type<I>>::type;
     };
 }
 #endif

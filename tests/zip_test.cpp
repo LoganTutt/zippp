@@ -371,6 +371,18 @@ TEST(ZipppTests, refTest)
     EXPECT_EQ(v.front(), 5);
 }
 
+TEST(ZipppTests, refArrTest)
+{
+    int v[] = {1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.begin();
+
+    auto& [val] = *it;
+    val = 5;
+    EXPECT_EQ(val, 5);
+    EXPECT_EQ(v[0], 5);
+}
+
 TEST(ZipppTests, rvalueRefTest)
 {
     std::vector<int> v{1,2,3};
