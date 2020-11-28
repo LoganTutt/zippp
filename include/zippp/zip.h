@@ -70,13 +70,17 @@ public:
 };
 
 template<typename ... Iters>
-class zip_iterator 
-    //TODO: : public std::iterator<iterator_tag_type,T,ptrdiff_t,const T*,const T&>
+class zip_iterator : 
+    public std::iterator<iterator_tag_type<Iters...>, zip_iter_value_view<Iters...>>
 {
 public:
-    using iterator_category = iterator_tag_type<Iters...>;
-    using difference_type = std::ptrdiff_t;
-    //TODO: add other itterator traits
+    // Iterator member types forwarded for convenience
+    using Base = std::iterator<iterator_tag_type<Iters...>, zip_iter_value_view<Iters...>>;
+    using iterator_category = typename Base::iterator_category;
+    using value_type = typename Base::value_type;
+    using difference_type = typename Base::difference_type;
+    using pointer = typename Base::pointer;
+    using reference = typename Base::reference;
 private:
     template<typename Tag>
     static constexpr inline bool is_tag = std::is_base_of_v<Tag, iterator_category>;
@@ -111,10 +115,11 @@ public:
         return temp;
     }
 
-    auto& operator*()
+    reference operator*()
     {
         return iter_view;
     }
+
     bool operator!=(zip_iterator<Iters...> in) const
     {
         return iter_tup != in.iter_tup;
