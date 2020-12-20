@@ -38,3 +38,7 @@ if(NOT MSVC)
     find_package(Threads REQUIRED)
     target_link_libraries(zippptests ${CMAKE_THREAD_LIBS_INIT})
 endif()
+
+find_package(benchmark REQUIRED)
+add_executable(zipppbench benchmarks/zippp_benchmarks.cpp)
+target_link_libraries(zipppbench benchmark::benchmark )

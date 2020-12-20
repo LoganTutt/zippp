@@ -51,10 +51,14 @@ TEST(ZipppTests, incTest)
     std::vector<int> v{1,2,3};
     auto col = zippp::zip(v);
     auto it = col.begin();
+    auto [val0] = *it;
+    EXPECT_EQ(1, val0);
     auto [val] = *(it++);
-    auto [val2] = *it;
+    std::cerr << "HERE2" << std::endl;
+    // auto [val2] = *it;
     EXPECT_EQ(1, val);
-    EXPECT_EQ(2, val2);
+    std::cerr << "HERE3" << std::endl;
+    // EXPECT_EQ(2, val2);
 }
 TEST(ZipppTests, singleTest)
 {

@@ -7,19 +7,6 @@ namespace zippp
 {
 namespace detail
 {
-template<typename Tuple, typename Func, std::size_t ... Ind>
-constexpr inline void foreach_tuple_impl(Tuple&& tup, Func&& func, std::integer_sequence<std::size_t, Ind...>)
-{
-    using ignore = int[];
-    static_cast<void>(ignore{1, (func(std::get<Ind>(std::forward<Tuple>(tup))), void(), int{})...});
-}
-
-template<typename Tuple, typename Func>
-constexpr inline void foreach_tuple(Tuple&& tup, Func&& func)
-{
-    constexpr std::size_t N = std::tuple_size<std::remove_reference_t<Tuple>>::value;
-    foreach_tuple_impl(std::forward<Tuple>(tup), std::forward<Func>(func), std::make_index_sequence<N>{});
-}
 
 template<typename Base, typename ... Types>
 constexpr inline bool all_are_type()
@@ -42,42 +29,61 @@ using iterator_tag_type = std::conditional_t<all_iter_are_type<std::random_acces
             std::forward_iterator_tag,
             std::input_iterator_tag>>>;
 
+template<typename index_seq, typename ... Iters>
+class zip_iterator;
+
+/**
+ * @brief Small class contianing the iterators in the collections
+ * 
+ * This class handles accessing the actual vaules when bound to a structured binding.
+ * Copies or references of the values is handled based on the value category of this object when it is bound.
+ */
 template<typename ... Iters>
-class zip_iter_value_view {
+class zip_iter_value {
 private:
     using tuple_type = std::tuple<Iters...>;
-    const tuple_type* iters;
+    /// Tupe containing the iterators pointing to each collection
+    tuple_type iters;
+
+    template<typename seq, typename ... T>
+    friend class zip_iterator;
 
 public:
     template<std::size_t I>
     using element_type = decltype((*std::declval<typename std::tuple_element<I, tuple_type>::type>()));
 
-    zip_iter_value_view(const tuple_type& iters_) : iters(&iters_) {}
+    zip_iter_value(Iters&&... iters_) : iters(std::forward<Iters>(iters_)...) {}
 
-    // Return a reference is the object is an lvalue
-    // This is true whenever the binding is any type of reference
+    /// Return a reference to the underlying value if this object is an lvalue.
+    /// This is true whenever the binding is any type of reference.
     template<std::size_t I>
     auto constexpr get() const &  -> element_type<I>
     { 
-        return *std::get<I>(*iters);
+        return *std::get<I>(iters);
     }
 
-    // Copy only if the object is an rvalue.
-    // This happens when the binding is not any form of reference.
+    /// Copy the value only if this object is an rvalue.
+    /// This happens when the binding is not any form of reference.
     template<std::size_t I>
     auto constexpr get() const && -> typename std::decay<element_type<I>>::type
     {
-        return *std::get<I>(*iters);
+        return *std::get<I>(iters);
     }
 };
 
-template<typename ... Iters>
-class zip_iterator : 
-    public std::iterator<iterator_tag_type<Iters...>, zip_iter_value_view<Iters...>>
+/**
+ * @brief The iterator for a zipped set of collections
+ * 
+ * Bidirectional (--) and random access (+=, -=, etc) operators are enabled when all internal iterators have the 
+ * correct operations as well.
+ */
+template<std::size_t ... Ind, typename ... Iters>
+class zip_iterator<std::index_sequence<Ind...>, Iters...>: 
+    public std::iterator<iterator_tag_type<Iters...>, zip_iter_value<Iters...>>
 {
 public:
     // Iterator member types forwarded for convenience
-    using Base = std::iterator<iterator_tag_type<Iters...>, zip_iter_value_view<Iters...>>;
+    using Base = std::iterator<iterator_tag_type<Iters...>, zip_iter_value<Iters...>>;
     using iterator_category = typename Base::iterator_category;
     using value_type = typename Base::value_type;
     using difference_type = typename Base::difference_type;
@@ -95,64 +101,58 @@ private:
     using IterEnabler = std::enable_if_t<is_tag<T>>;
 
 public:
-    zip_iterator(Iters&&... iters) : iter_tup(std::forward<Iters>(iters)...), iter_view(iter_tup) {}
+    zip_iterator(Iters&&... iters) : iter_values(std::forward<Iters>(iters)...) {}
     ~zip_iterator() = default;
 
-    // Copy and move operators
-    zip_iterator(const zip_iterator& in) : iter_tup(in.iter_tup), iter_view(iter_tup) {}
-    zip_iterator(zip_iterator&& in) : iter_tup(std::move(in.iter_tup)), iter_view(iter_tup) {}
-    zip_iterator& operator=(zip_iterator in)
-    {
-        std::swap(in.iter_tup, iter_tup);
-        iter_view = zip_iter_value_view(iter_tup);
-    }
-
+    // Increment operators
     decltype(auto) operator++()
     {
-        foreach_tuple(iter_tup, [](auto&& iter){++iter;});
+        ((void)++std::get<Ind>(iter_values.iters), ...);
         return *this;
     }
     auto operator++(int)
     {
         auto temp = *this;
-        foreach_tuple(iter_tup, [](auto&& iter){++iter;});
+        ++*this;
         return temp;
     }
 
+    // Dereference operators
     reference operator*()
     {
-        return iter_view;
+        return iter_values;
     }
 
-    bool operator!=(zip_iterator<Iters...> in) const
+    // Comparison operators
+    bool operator==(zip_iterator<std::index_sequence<Ind...>, Iters...> in) const
     {
-        return iter_tup != in.iter_tup;
+        return std::get<0>(iter_values.iters) == std::get<0>(in.iter_values.iters);
     }
-    bool operator==(zip_iterator<Iters...> in) const
+    bool operator!=(zip_iterator<std::index_sequence<Ind...>, Iters...> in) const
     {
-        return iter_tup == in.iter_tup;
+        return !(*this == in);
     }
 
     // Bidirectional operations
     template<typename T = std::bidirectional_iterator_tag, typename X = IterEnabler<T>>
     decltype(auto) operator--()
     {
-        foreach_tuple(iter_tup, [](auto&& iter){--iter;});
+        ((void)--std::get<Ind>(iter_values.iters), ...);
         return *this;
     }
     template<typename T = std::bidirectional_iterator_tag, typename X = IterEnabler<T>>
     auto operator--(int)
     {
         auto temp = *this;
-        foreach_tuple(iter_tup, [](auto&& iter){--iter;});
+        --*this;
         return temp;
     }
 
-    //random access operations
+    // Random Access operations
     template<typename T = std::random_access_iterator_tag, typename X = IterEnabler<T>>
     decltype(auto) operator+=(ptrdiff_t i)
     {
-        foreach_tuple(iter_tup, [i](auto&& iter){iter+=i;});
+        (((void)(std::get<Ind>(iter_values.iters) += i)), ...);
         return *this;
     }
     template<typename T = std::random_access_iterator_tag, typename X = IterEnabler<T>>
@@ -165,7 +165,7 @@ public:
     template<typename T = std::random_access_iterator_tag, typename X = IterEnabler<T>>
     decltype(auto) operator-=(ptrdiff_t i)
     {
-        foreach_tuple(iter_tup, [i](auto&& iter){iter-=i;});
+        (((void)(std::get<Ind>(iter_values.iters) -= i)), ...);
         return *this;
     }
     template<typename T = std::random_access_iterator_tag, typename X = IterEnabler<T>>
@@ -177,9 +177,9 @@ public:
     }
 
 private:
-    std::tuple<Iters...> iter_tup;
-    // Keep the value view here so that we can return lvalue references to it
-    zip_iter_value_view<Iters...> iter_view;
+    // The actual iterators are stored inside this object
+    // Keep the values here so that we can return lvalue references to it
+    zip_iter_value<Iters...> iter_values;
 
 };
 
@@ -187,7 +187,8 @@ template<typename ... Collections>
 class zip_collection
 {
 public:
-    using iterator = zip_iterator<decltype(std::begin(std::declval<Collections>()))...>;
+    using iterator = zip_iterator<std::make_index_sequence<sizeof...(Collections)>, 
+                                  decltype(std::begin(std::declval<Collections>()))...>;
     // If a list is an rvalue we will move it into our tuple and keep an actual list stored
     // Otherwise we keep a reference
     using tuple_type = std::tuple<std::conditional_t<std::is_rvalue_reference<Collections>::value,
@@ -197,18 +198,18 @@ public:
 
     decltype(auto) begin()
     {
-        return std::apply([](auto&&... cols){return zip_iterator(std::begin(cols)...);}, col_tup);
+        return std::apply([](auto&&... cols){return iterator(std::begin(cols)...);}, col_tup);
     }
 
     decltype(auto) end()
     {
-        return std::apply([](auto&&... cols){return zip_iterator(std::end(cols)...);}, col_tup);
+        return std::apply([](auto&&... cols){return iterator(std::end(cols)...);}, col_tup);
     }
 
 private:
     tuple_type col_tup;
 };
-}
+} // namespace detail
 
 /**
  * @brief Creates a wrapper collection of the provided collections that will iterate through all at once
@@ -224,17 +225,17 @@ auto zip(Collections&& ... collections)
 {
     return detail::zip_collection<Collections...>(std::forward<Collections>(collections)...);
 }
-}
+} // namespace zippp
 
-// Template specializations for zip_iter_value_view to let it be bound by structured bindings
+// Template specializations for zip_iter_value to let it be bound by structured bindings
 namespace std {
     template<typename ... Iters>
-    struct tuple_size<zippp::detail::zip_iter_value_view<Iters...>> : std::integral_constant<size_t, sizeof...(Iters)> {};
+    struct tuple_size<zippp::detail::zip_iter_value<Iters...>> : std::integral_constant<size_t, sizeof...(Iters)> {};
 
     template<std::size_t I, typename ... Iters>
-    struct tuple_element<I, zippp::detail::zip_iter_value_view<Iters...>>
+    struct tuple_element<I, zippp::detail::zip_iter_value<Iters...>>
     {
-        using type = typename std::decay<typename zippp::detail::zip_iter_value_view<Iters...>::template element_type<I>>::type;
+        using type = typename std::decay_t<typename zippp::detail::zip_iter_value<Iters...>::template element_type<I>>;
     };
-}
+} // namespace std
 #endif
