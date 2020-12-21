@@ -5,7 +5,7 @@
 #include "zippp/zip.h"
 
 
-constexpr int num_items = 100;
+constexpr int num_items = 1000;
 template<class Col>
 void init_col(Col& col) {
     for(std::size_t i = 0; i < num_items; ++i) {
@@ -38,18 +38,20 @@ using bench_t = bench_cols<std::array<int, num_items>, std::vector<bool>, std::v
 static void BM_zipppiter(benchmark::State& state) {
     // bench_cols<std::vector<int>, std::vector<double>, std::vector<long long>> cols;
     bench_t cols;
+    int v = 0;
     for (auto _ : state) {
         int value = 0;
         for(const auto& [val1, val2, val3] : zippp::zip(cols.col1, cols.col2, cols.col3)){
             value += val1 + val2 + val3;
         }
-        benchmark::ClobberMemory();
+        benchmark::DoNotOptimize(v+=value);
     }
 }
 
 static void BM_normaliter(benchmark::State& state) {
     // bench_cols<std::vector<int>, std::vector<double>, std::vector<long long>> cols;
     bench_t cols;
+    int v = 0;
     for (auto _ : state) {
         int value = 0;
         auto it1 = cols.col1.cbegin();
@@ -58,19 +60,20 @@ static void BM_normaliter(benchmark::State& state) {
         for(; it1 != cols.col1.end(); ++it1, ++it2, ++it3) {
             value += *it1 + *it2 + *it3;
         }
-        benchmark::ClobberMemory();
+        benchmark::DoNotOptimize(v+=value);
     }
 }
 
 static void BM_indexiter(benchmark::State& state) {
     // bench_cols<std::vector<int>, std::vector<double>, std::vector<long long>> cols;
     bench_t cols;
+    int v = 0;
     for (auto _ : state) {
         int value = 0;
         for(std::size_t i = 0; i < cols.col1.size(); ++i) {
             value += cols.col1[i] + cols.col2[i] + cols.col3[i];
         }
-        benchmark::ClobberMemory();
+        benchmark::DoNotOptimize(v+=value);
     }
 }
 // Register the function as a benchmark
