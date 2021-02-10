@@ -430,5 +430,6 @@ TEST(ZipppTests, copyConstSourceTest)
     auto [val] = *it;
     val = 5;
     EXPECT_EQ(val, 5);
-    EXPECT_EQ(v.front(), 1);
+     EXPECT_EQ(v.front(), 1);
+     ASSERT_TRUE(false);
 }
