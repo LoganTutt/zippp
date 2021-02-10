@@ -11,9 +11,14 @@ jobs:
     - uses: actions/checkout@v1
 
     - name: configure
-      run: mkdir build
-    - name: action-gtest
-      #TODO: Replace this with a cached build
-      uses: CyberZHG/github-action-gtest@0.0.1
-      with:
-        args: "-d . -e zippptests"
+      run: |
+        mkdir build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Release ../
+    - name: build
+      run: |
+        cd build
+        make
+    - name: run_tests
+      run: |
+        ./build/zippptests
