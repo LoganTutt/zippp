@@ -1,44 +1,57 @@
-project( zippp )
-cmake_minimum_required( VERSION 3.8 )
+project(zippp)
+cmake_minimum_required( VERSION 2.9 )
 set(CMAKE_CXX_STANDARD 17)
 
-if(MSVC)
-    #disable warning for override of GTEST_ROOT so that the path can be configured if needed
-    if (POLICY CMP0074)
-        cmake_policy(SET CMP0074 NEW)
-    endif()
-endif(MSVC)
-
-find_package(GTest REQUIRED)
-
-include_directories(include)
-include_directories(${GTEST_INCLUDE_DIRS})
-
-
-# Find the correct versions of gtest for different platforms
-if(MSVC)
-    # On windows there is different binaries for debug and release
-    # They also require different flags when building
-    if(CMAKE_BUILD_TYPE MATCHES Debug)
-        set(GTEST_LIBS "${GTEST_LIBRARY_DEBUG};${GTEST_MAIN_LIBRARY_DEBUG}")
-        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-    else()
-        set(GTEST_LIBS "${GTEST_LIBRARY};${GTEST_MAIN_LIBRARY}")
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-    endif()
-else()
-    set(GTEST_LIBS "${GTEST_BOTH_LIBRARIES}")
-endif(MSVC)
-
-add_executable(zippptests tests/zip_test.cpp)
-target_link_libraries(zippptests ${GTEST_LIBS} )
-
-if(NOT MSVC)
-    #Gtest requires pthread on Unix
-    find_package(Threads REQUIRED)
-    target_link_libraries(zippptests ${CMAKE_THREAD_LIBS_INIT})
+# Download and unpack googletest at configure time
+# Based on example at https://crascit.com/2015/07/25/cmake-gtest/
+configure_file(GtestCMakeLists.txt.in googletest-download/CMakeLists.txt)
+execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download )
+if(result)
+  message(FATAL_ERROR "CMake step for googletest failed: ${result}")
+endif()
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download )
+if(result)
+  message(FATAL_ERROR "Build step for googletest failed: ${result}")
 endif()
 
-find_package(benchmark REQUIRED)
+# Prevent overriding the parent project's compiler/linker
+# settings on Windows
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+# Add googletest directly to our build. This defines
+# the gtest and gtest_main targets.
+add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
+                 ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
+                 EXCLUDE_FROM_ALL)
+
+# Download and unpack google benchmark at configure time
+configure_file(BenchmarkCMakeLists.txt.in benchmark-download/CMakeLists.txt)
+execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/benchmark-download )
+if(result)
+  message(FATAL_ERROR "CMake step for benchmark failed: ${result}")
+endif()
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/benchmark-download )
+if(result)
+  message(FATAL_ERROR "Build step for benchmark failed: ${result}")
+endif()
+add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/benchmark-src
+                 ${CMAKE_CURRENT_BINARY_DIR}/benchmark-build
+                 EXCLUDE_FROM_ALL)
+
+
+# actual code for zipppp
+include_directories(include)
+
+add_executable(zippptests tests/zip_test.cpp)
+target_link_libraries(zippptests gtest gtest_main )
+
 add_executable(zipppbench benchmarks/zippp_benchmarks.cpp)
 target_link_libraries(zipppbench benchmark::benchmark )

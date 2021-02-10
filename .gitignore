@@ -33,6 +33,7 @@
 
 #CMake build dir
 *build/
+*release/
 #vs code configs
 .vscode/
 *.code-workspace

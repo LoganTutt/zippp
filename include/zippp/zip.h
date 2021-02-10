@@ -78,17 +78,16 @@ public:
  * correct operations as well.
  */
 template<std::size_t ... Ind, typename ... Iters>
-class zip_iterator<std::index_sequence<Ind...>, Iters...>: 
-    public std::iterator<iterator_tag_type<Iters...>, zip_iter_value<Iters...>>
+class zip_iterator<std::index_sequence<Ind...>, Iters...>
 {
 public:
     // Iterator member types forwarded for convenience
-    using Base = std::iterator<iterator_tag_type<Iters...>, zip_iter_value<Iters...>>;
-    using iterator_category = typename Base::iterator_category;
-    using value_type = typename Base::value_type;
-    using difference_type = typename Base::difference_type;
-    using pointer = typename Base::pointer;
-    using reference = typename Base::reference;
+    //using Base = std::iterator<iterator_tag_type<Iters...>, zip_iter_value<Iters...>>;
+    using iterator_category = iterator_tag_type<Iters...>;
+    using value_type = zip_iter_value<Iters...>; 
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type*;
+    using reference = value_type&;
 
 private:
     template<typename Tag>

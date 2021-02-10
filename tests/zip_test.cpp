@@ -54,11 +54,9 @@ TEST(ZipppTests, incTest)
     auto [val0] = *it;
     EXPECT_EQ(1, val0);
     auto [val] = *(it++);
-    std::cerr << "HERE2" << std::endl;
-    // auto [val2] = *it;
+    auto [val2] = *it;
     EXPECT_EQ(1, val);
-    std::cerr << "HERE3" << std::endl;
-    // EXPECT_EQ(2, val2);
+    EXPECT_EQ(2, val2);
 }
 TEST(ZipppTests, singleTest)
 {
