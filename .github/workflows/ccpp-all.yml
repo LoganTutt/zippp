@@ -1,0 +1,64 @@
+name: build-and-test-all
+
+on: [push]
+
+jobs:
+  linux-gcc:
+    name: "linux-gcc"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: configure
+      run: |
+        mkdir build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Release ../
+    - name: build
+      run: |
+        cd build
+        make
+    - name: run_tests
+      run: |
+        ./build/zippptests
+  linux-clang:
+    name: "linux-clang"
+    runs-on: ubuntu-latest
+    env:
+      CC:   clang
+      CXX:  clang++
+    
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: setup
+      run: sudo apt-get install -y llvm-10 clang-10
+    - name: configure
+      run: |
+        mkdir build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Release ../
+    - name: build
+      run: |
+        cd build
+        make
+    - name: run_tests
+      run: |
+        ./build/zippptests
+
+  windows:
+    name: "windows"
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: configure
+      run: |
+        mkdir build
+        cd build
+        cmake ../
+    - name: build
+      run: cmake --build build --config Release
+    - name: run_tests
+      run: |
+        .\build\Release\zippptests.exe

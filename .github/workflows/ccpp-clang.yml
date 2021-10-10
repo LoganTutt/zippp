@@ -1,15 +1,23 @@
-name: C/C++ CI
+name: linux-clang
 
-on: [push]
+on:
+  push:
+    branches:
+      - 'master'
 
 jobs:
-  build:
-
+  linux-clang:
+    name: "linux-clang"
     runs-on: ubuntu-latest
+    env:
+      CC:   clang
+      CXX:  clang++
     
     steps:
     - uses: actions/checkout@v1
 
+    - name: setup
+      run: sudo apt-get install -y llvm-10 clang-10
     - name: configure
       run: |
         mkdir build

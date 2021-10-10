@@ -1,0 +1,25 @@
+name: linux-gcc
+
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  linux-gcc:
+    name: "linux-gcc"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: configure
+      run: |
+        mkdir build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Release ../
+    - name: build
+      run: |
+        cd build
+        make
+    - name: run_tests
+      run: |
+        ./build/zippptests

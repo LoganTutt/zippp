@@ -1,0 +1,25 @@
+name: windows
+
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  windows:
+    name: "windows"
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: configure
+      run: |
+        mkdir build
+        cd build
+        cmake ../
+    - name: build
+      run: cmake --build build --config Release
+    - name: run_tests
+      run: |
+        .\build\Release\zippptests.exe
