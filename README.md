@@ -1,7 +1,9 @@
 # zippp
 Type-safe Python style zip function in C++17, with added support for random access and bi-directional iterators.
 
-![ci badge](https://github.com/LoganTutt/zippp/workflows/build-and-test/badge.svg)
+![ci badge gcc](https://github.com/LoganTutt/zippp/workflows/linux-gcc/badge.svg)
+![ci badge clang](https://github.com/LoganTutt/zippp/workflows/linux-clang/badge.svg)
+![ci badge windows](https://github.com/LoganTutt/zippp/workflows/windows/badge.svg)
 
 ## Features
 * Type-safe creation of merged lists from an arbitrary number of input lists
