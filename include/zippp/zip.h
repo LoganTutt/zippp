@@ -82,7 +82,6 @@ class zip_iterator<std::index_sequence<Ind...>, Iters...>
 {
 public:
     // Iterator member types forwarded for convenience
-    //using Base = std::iterator<iterator_tag_type<Iters...>, zip_iter_value<Iters...>>;
     using iterator_category = iterator_tag_type<Iters...>;
     using value_type = zip_iter_value<Iters...>; 
     using difference_type = std::ptrdiff_t;
@@ -182,27 +181,32 @@ private:
 
 };
 
+/// Using begin to allow for ADL
+using std::begin;
+
 template<typename ... Collections>
 class zip_collection
 {
 public:
-    using iterator = zip_iterator<std::make_index_sequence<sizeof...(Collections)>, 
-                                  decltype(std::begin(std::declval<Collections>()))...>;
-    // If a list is an rvalue we will move it into our tuple and keep an actual list stored
+    using iterator =  zip_iterator<std::make_index_sequence<sizeof...(Collections)>, 
+                                  decltype(begin(std::declval<Collections>()))...>;
+    // If a Collection is an rvalue we will move it into our tuple and keep an actual list stored
     // Otherwise we keep a reference
     using tuple_type = std::tuple<std::conditional_t<std::is_rvalue_reference<Collections>::value,
-                                  std::decay_t<Collections>, Collections>...>;
+                                  std::decay_t<Collections>, Collections&>...>;
 
     zip_collection(Collections&& ... in_cols) : col_tup(std::forward<Collections>(in_cols)...){}
 
     decltype(auto) begin()
     {
-        return std::apply([](auto&&... cols){return iterator(std::begin(cols)...);}, col_tup);
+        using std::begin;
+        return std::apply([](auto&&... cols){return iterator(begin(std::forward<Collections>(cols))...);}, col_tup);
     }
 
     decltype(auto) end()
     {
-        return std::apply([](auto&&... cols){return iterator(std::end(cols)...);}, col_tup);
+        using std::end;
+        return std::apply([](auto&&... cols){return iterator(end(std::forward<Collections>(cols))...);}, col_tup);
     }
 
 private:
@@ -222,7 +226,7 @@ private:
 template<typename ... Collections>
 auto zip(Collections&& ... collections)
 {
-    return detail::zip_collection<Collections...>(std::forward<Collections>(collections)...);
+    return detail::zip_collection<decltype((std::forward<Collections>(collections)))...>(std::forward<Collections>(collections)...);
 }
 } // namespace zippp
 

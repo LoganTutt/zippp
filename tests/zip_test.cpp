@@ -365,6 +365,8 @@ TEST(ZipppTests, refTest)
 {
     std::vector<int> v{1,2,3};
     auto col = zippp::zip(v);
+    //Resize the vector to make sure it wasnt accidently moved or anything
+    v.resize(1000);
     auto it = col.begin();
 
     auto& [val] = *it;
