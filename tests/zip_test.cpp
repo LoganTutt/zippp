@@ -116,7 +116,8 @@ TEST(ZipppTests, boolVectTest)
     int count = 0;
     for(auto&&[i] : zippp::zip(v))
     {
-        // No static asserts as i is a bool reference
+        static_assert(std::is_same<std::decay_t<decltype(v[0])>, std::decay_t<decltype(i)>>::value,
+            "Type of binding doesnt match type of list");
         ASSERT_EQ(count++ % 2 == 1, i) << "bools dont match for idx: "  << count;
     }
 }
@@ -180,6 +181,8 @@ TEST(ZipppTests, forwardTagTest)
     auto col = zippp::zip(l1,l2,l3);
     static_assert(std::is_same_v<std::forward_iterator_tag,decltype(col)::iterator::iterator_category>, 
         "Iterator category is not forward iterator");
+    static_assert(std::is_same_v<std::forward_iterator_tag,decltype(col)::const_iterator::iterator_category>, 
+        "Const Iterator category is not forward iterator");
     ASSERT_TRUE(true);
 }
 
@@ -190,6 +193,8 @@ TEST(ZipppTests, biDirTagTest)
     auto col = zippp::zip(l1,l2);
     static_assert(std::is_same_v<std::bidirectional_iterator_tag,decltype(col)::iterator::iterator_category>, 
         "Iterator category is not bidirectional iterator");
+    static_assert(std::is_same_v<std::bidirectional_iterator_tag,decltype(col)::const_iterator::iterator_category>, 
+        "Const Iterator category is not bidirectional iterator");
     ASSERT_TRUE(true);
 }
 
@@ -199,6 +204,8 @@ TEST(ZipppTests, randomTagTest)
     std::vector<int> l2;
     auto col = zippp::zip(l1,l2);
     static_assert(std::is_same_v<std::random_access_iterator_tag, decltype(col)::iterator::iterator_category>, 
+        "Iterator category is not random access iterator");
+    static_assert(std::is_same_v<std::random_access_iterator_tag, decltype(col)::const_iterator::iterator_category>, 
         "Iterator category is not random access iterator");
     ASSERT_TRUE(true);
 }
@@ -433,4 +440,88 @@ TEST(ZipppTests, copyConstSourceTest)
     val = 5;
     EXPECT_EQ(val, 5);
     EXPECT_EQ(v.front(), 1);
+}
+
+
+TEST(ZipppTests, cbeginCopyTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.cbegin();
+    static_assert(std::is_const_v<std::remove_reference_t<decltype(((*it).get<0>()))>>, "Binding is not const");
+
+    auto [val] = *it;
+    EXPECT_EQ(val, 1);
+    v.front() = 5;
+    EXPECT_EQ(val, 1);
+}
+
+TEST(ZipppTests, cbeginConstCopyTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.cbegin();
+    static_assert(std::is_const_v<std::remove_reference_t<decltype(((*it).get<0>()))>>, "Binding is not const");
+
+    const auto [val] = *it;
+    static_assert(std::is_const_v<decltype(val)>, "Binding is not const");
+    EXPECT_EQ(val, 1);
+    v.front() = 5;
+    EXPECT_EQ(val, 1);
+}
+
+TEST(ZipppTests, cbeginRefTest)
+{
+    std::vector<int> v{1,2,3};
+    auto col = zippp::zip(v);
+    auto it = col.cbegin();
+    static_assert(std::is_const_v<std::remove_reference_t<decltype(((*it).get<0>()))>>, "Binding is not const");
+
+    const auto& [val] = *it;
+    static_assert(std::is_const_v<decltype(val)>, "Binding is not const");
+    EXPECT_EQ(val, 1);
+    v.front() = 5;
+    EXPECT_EQ(val, 5);
+}
+
+
+TEST(ZipppTests, constBeginCopyTest)
+{
+    std::vector<int> v{1,2,3};
+    const auto col = zippp::zip(v);
+    auto it = col.begin();
+    static_assert(std::is_const_v<std::remove_reference_t<decltype(((*it).get<0>()))>>, "Binding is not const");
+
+    auto [val] = *it;
+    EXPECT_EQ(val, 1);
+    v.front() = 5;
+    EXPECT_EQ(val, 1);
+}
+
+TEST(ZipppTests, constBeginConstCopyTest)
+{
+    std::vector<int> v{1,2,3};
+    const auto col = zippp::zip(v);
+    auto it = col.begin();
+    static_assert(std::is_const_v<std::remove_reference_t<decltype(((*it).get<0>()))>>, "Binding is not const");
+
+    const auto [val] = *it;
+    static_assert(std::is_const_v<decltype(val)>, "Binding is not const");
+    EXPECT_EQ(val, 1);
+    v.front() = 5;
+    EXPECT_EQ(val, 1);
+}
+
+TEST(ZipppTests, constBeginRefTest)
+{
+    std::vector<int> v{1,2,3};
+    const auto col = zippp::zip(v);
+    auto it = col.begin();
+    static_assert(std::is_const_v<std::remove_reference_t<decltype(((*it).get<0>()))>>, "Binding is not const");
+
+    const auto& [val] = *it;
+    static_assert(std::is_const_v<decltype(val)>, "Binding is not const");
+    EXPECT_EQ(val, 1);
+    v.front() = 5;
+    EXPECT_EQ(val, 5);
 }

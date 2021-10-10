@@ -183,13 +183,16 @@ private:
 
 /// Using begin to allow for ADL
 using std::begin;
+using std::cbegin;
 
 template<typename ... Collections>
 class zip_collection
 {
 public:
-    using iterator =  zip_iterator<std::make_index_sequence<sizeof...(Collections)>, 
+    using iterator = zip_iterator<std::make_index_sequence<sizeof...(Collections)>, 
                                   decltype(begin(std::declval<Collections>()))...>;
+    using const_iterator = zip_iterator<std::make_index_sequence<sizeof...(Collections)>, 
+                                  decltype(cbegin(std::declval<Collections>()))...>;
     // If a Collection is an rvalue we will move it into our tuple and keep an actual list stored
     // Otherwise we keep a reference
     using tuple_type = std::tuple<std::conditional_t<std::is_rvalue_reference<Collections>::value,
@@ -207,6 +210,28 @@ public:
     {
         using std::end;
         return std::apply([](auto&&... cols){return iterator(end(std::forward<Collections>(cols))...);}, col_tup);
+    }
+
+    decltype(auto) begin() const
+    {
+        return cbegin();
+    }
+
+    decltype(auto) end() const
+    {
+        return cend();
+    }
+
+    decltype(auto) cbegin() const
+    {
+        using std::cbegin;
+        return std::apply([](auto&&... cols){return const_iterator(cbegin(std::forward<Collections>(cols))...);}, col_tup);
+    }
+
+    decltype(auto) cend() const
+    {
+        using std::cend;
+        return std::apply([](auto&&... cols){return const_iterator(cend(std::forward<Collections>(cols))...);}, col_tup);
     }
 
 private:
