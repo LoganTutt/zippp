@@ -182,17 +182,25 @@ private:
 };
 
 /// Using begin to allow for ADL
+namespace zip_iter_types
+{
 using std::begin;
 using std::cbegin;
+template<typename ... Collections>
+using iterator = zip_iterator<std::make_index_sequence<sizeof...(Collections)>, 
+                              decltype(begin(std::declval<Collections>()))...>;
+template<typename ... Collections>
+using const_iterator = zip_iterator<std::make_index_sequence<sizeof...(Collections)>, 
+                                    decltype(cbegin(std::declval<Collections>()))...>;
+}
+
 
 template<typename ... Collections>
 class zip_collection
 {
 public:
-    using iterator = zip_iterator<std::make_index_sequence<sizeof...(Collections)>, 
-                                  decltype(begin(std::declval<Collections>()))...>;
-    using const_iterator = zip_iterator<std::make_index_sequence<sizeof...(Collections)>, 
-                                  decltype(cbegin(std::declval<Collections>()))...>;
+    using iterator = zip_iter_types::iterator<Collections...>;
+    using const_iterator = zip_iter_types::const_iterator<Collections...>;
     // If a Collection is an rvalue we will move it into our tuple and keep an actual list stored
     // Otherwise we keep a reference
     using tuple_type = std::tuple<std::conditional_t<std::is_rvalue_reference<Collections>::value,
@@ -214,12 +222,12 @@ public:
 
     decltype(auto) begin() const
     {
-        return cbegin();
+        return this->cbegin();
     }
 
     decltype(auto) end() const
     {
-        return cend();
+        return this->cend();
     }
 
     decltype(auto) cbegin() const
