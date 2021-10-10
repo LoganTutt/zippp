@@ -34,7 +34,7 @@ struct bench_cols {
     }
 };
 
-using bench_t = bench_cols<std::array<int, num_items>, std::vector<bool>, std::vector<long long>>;
+using bench_t = bench_cols<std::array<int, num_items>, std::vector<double>, std::vector<long long>>;
 
 static void BM_zipppiter(benchmark::State& state) {
     // bench_cols<std::vector<int>, std::vector<double>, std::vector<long long>> cols;
